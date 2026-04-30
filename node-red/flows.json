@@ -1,0 +1,441 @@
+[
+    {
+        "id": "bf57d92f724ef88b",
+        "type": "tab",
+        "label": "Vibration Fault Detection",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "b276b042ebd71d31",
+        "type": "mqtt-broker",
+        "name": "Local Mosquitto",
+        "broker": "mqtt",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "dashboard_tab_machine",
+        "type": "ui_tab",
+        "name": "Machine Monitoring",
+        "icon": "dashboard",
+        "order": 1,
+        "disabled": false,
+        "hidden": false
+    },
+    {
+        "id": "dashboard_group_motor",
+        "type": "ui_group",
+        "name": "Motor 01",
+        "tab": "dashboard_tab_machine",
+        "order": 1,
+        "disp": true,
+        "width": "12",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "mqtt_vibration_data",
+        "type": "mqtt in",
+        "z": "bf57d92f724ef88b",
+        "name": "Vibration Data",
+        "topic": "sensors/group07/vibration/data",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "b276b042ebd71d31",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 140,
+        "y": 100,
+        "wires": [
+            [
+                "parse_sensor_data"
+            ]
+        ]
+    },
+    {
+        "id": "parse_sensor_data",
+        "type": "function",
+        "z": "bf57d92f724ef88b",
+        "name": "Parse Sensor Data",
+        "func": "if (typeof msg.payload === \"string\") {\n    msg.payload = JSON.parse(msg.payload);\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 100,
+        "wires": [
+            [
+                "debug_sensor_data",
+                "fn_vibration",
+                "fn_temperature",
+                "fn_status"
+            ]
+        ]
+    },
+    {
+        "id": "debug_sensor_data",
+        "type": "debug",
+        "z": "bf57d92f724ef88b",
+        "name": "Sensor Debug",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 610,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "fn_vibration",
+        "type": "function",
+        "z": "bf57d92f724ef88b",
+        "name": "Get Vibration",
+        "func": "msg.payload = msg.payload.vibration_rms;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 610,
+        "y": 100,
+        "wires": [
+            [
+                "ui_gauge_vibration",
+                "ui_chart_vibration"
+            ]
+        ]
+    },
+    {
+        "id": "fn_temperature",
+        "type": "function",
+        "z": "bf57d92f724ef88b",
+        "name": "Get Temperature",
+        "func": "msg.payload = msg.payload.temperature;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 620,
+        "y": 200,
+        "wires": [
+            [
+                "ui_gauge_temperature",
+                "ui_chart_temperature"
+            ]
+        ]
+    },
+    {
+        "id": "fn_status",
+        "type": "function",
+        "z": "bf57d92f724ef88b",
+        "name": "Get Status",
+        "func": "msg.payload = msg.payload.status + \" - \" + msg.payload.fault_type;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 600,
+        "y": 300,
+        "wires": [
+            [
+                "ui_text_status"
+            ]
+        ]
+    },
+    {
+        "id": "mqtt_alert_status",
+        "type": "mqtt in",
+        "z": "bf57d92f724ef88b",
+        "name": "Fault Alerts",
+        "topic": "alerts/group07/vibration/status",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "b276b042ebd71d31",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 130,
+        "y": 420,
+        "wires": [
+            [
+                "parse_alert_data"
+            ]
+        ]
+    },
+    {
+        "id": "parse_alert_data",
+        "type": "function",
+        "z": "bf57d92f724ef88b",
+        "name": "Parse Alert Data",
+        "func": "if (typeof msg.payload === \"string\") {\n    msg.payload = JSON.parse(msg.payload);\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 420,
+        "wires": [
+            [
+                "debug_alert_data",
+                "fn_alert"
+            ]
+        ]
+    },
+    {
+        "id": "debug_alert_data",
+        "type": "debug",
+        "z": "bf57d92f724ef88b",
+        "name": "Alert Debug",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 600,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "fn_alert",
+        "type": "function",
+        "z": "bf57d92f724ef88b",
+        "name": "Get Alert",
+        "func": "msg.payload = msg.payload.status + \": \" + msg.payload.message;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 590,
+        "y": 460,
+        "wires": [
+            [
+                "ui_text_alert"
+            ]
+        ]
+    },
+    {
+        "id": "ui_gauge_vibration",
+        "type": "ui_gauge",
+        "z": "bf57d92f724ef88b",
+        "name": "Vibration RMS Gauge",
+        "group": "dashboard_group_motor",
+        "order": 1,
+        "width": 6,
+        "height": 4,
+        "gtype": "gage",
+        "title": "Vibration RMS",
+        "label": "mm/s",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "10",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "4",
+        "seg2": "6",
+        "diff": false,
+        "className": "",
+        "x": 870,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "ui_chart_vibration",
+        "type": "ui_chart",
+        "z": "bf57d92f724ef88b",
+        "name": "Vibration Trend",
+        "group": "dashboard_group_motor",
+        "order": 2,
+        "width": 6,
+        "height": 4,
+        "label": "Vibration Trend",
+        "chartType": "line",
+        "legend": "false",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "0",
+        "ymax": "10",
+        "removeOlder": "1",
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 860,
+        "y": 130,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "ui_gauge_temperature",
+        "type": "ui_gauge",
+        "z": "bf57d92f724ef88b",
+        "name": "Temperature Gauge",
+        "group": "dashboard_group_motor",
+        "order": 3,
+        "width": 6,
+        "height": 4,
+        "gtype": "gage",
+        "title": "Temperature",
+        "label": "C",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "100",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "50",
+        "seg2": "60",
+        "diff": false,
+        "className": "",
+        "x": 870,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "ui_chart_temperature",
+        "type": "ui_chart",
+        "z": "bf57d92f724ef88b",
+        "name": "Temperature Trend",
+        "group": "dashboard_group_motor",
+        "order": 4,
+        "width": 6,
+        "height": 4,
+        "label": "Temperature Trend",
+        "chartType": "line",
+        "legend": "false",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "0",
+        "ymax": "100",
+        "removeOlder": "1",
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#d62728",
+            "#ff9896",
+            "#1f77b4",
+            "#aec7e8",
+            "#2ca02c",
+            "#98df8a",
+            "#ff7f0e",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 870,
+        "y": 250,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "ui_text_status",
+        "type": "ui_text",
+        "z": "bf57d92f724ef88b",
+        "group": "dashboard_group_motor",
+        "order": 5,
+        "width": 6,
+        "height": 1,
+        "name": "Machine Status",
+        "label": "Machine Status",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "className": "",
+        "x": 850,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "ui_text_alert",
+        "type": "ui_text",
+        "z": "bf57d92f724ef88b",
+        "group": "dashboard_group_motor",
+        "order": 6,
+        "width": 6,
+        "height": 1,
+        "name": "Fault Alert",
+        "label": "Fault Alert",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "className": "",
+        "x": 840,
+        "y": 460,
+        "wires": []
+    }
+]
