@@ -83,7 +83,6 @@ python/model.json
 ```
 
 The model file stores the learned normal vibration and temperature values.
-The current training script uses 1000 simulated normal samples.
 
 ### 4. Run the Vibration Publisher
 
