@@ -197,10 +197,3 @@ Suggested screenshots:
 - Store MQTT data in a database for historical analysis
 - Improve the dashboard with status colors and fault history
 
-## GitHub Repository
-
-Submit the final repository link in this format:
-
-```text
-https://github.com/<username>/edge-ai-groupXX
-```
