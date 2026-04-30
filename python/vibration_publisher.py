@@ -2,8 +2,11 @@ import json
 import math
 import random
 import time
+from pathlib import Path
 
 import paho.mqtt.client as mqtt
+
+from edge_ai_model import GaussianAnomalyDetector
 
 BROKER = "localhost"
 PORT = 1883
@@ -16,16 +19,32 @@ DATA_TOPIC = f"sensors/{GROUP_ID}/{PROJECT}/data"
 ALERT_TOPIC = f"alerts/{GROUP_ID}/{PROJECT}/status"
 
 PUBLISH_INTERVAL_SECONDS = 2
+MODEL_PATH = Path(__file__).with_name("model.json")
 
 
-def detect_fault(vibration_rms, temperature):
-    if vibration_rms > 6.0:
-        return True, "FAULT", "High vibration detected"
-    if vibration_rms > 4.0:
-        return True, "WARNING", "Vibration above normal level"
-    if temperature > 60.0:
-        return True, "WARNING", "High temperature detected"
-    return False, "NORMAL", "Machine operating normally"
+def load_edge_model():
+    if not MODEL_PATH.exists():
+        raise FileNotFoundError(
+            f"Model file not found: {MODEL_PATH}. Run 'python python/train_model.py' first."
+        )
+
+    with MODEL_PATH.open("r", encoding="utf-8") as model_file:
+        model_data = json.load(model_file)
+
+    return GaussianAnomalyDetector.from_dict(model_data)
+
+
+def detect_fault(model, vibration_rms, temperature):
+    anomaly_detected, anomaly_score = model.predict(vibration_rms, temperature)
+
+    if anomaly_detected and vibration_rms > 6.0:
+        return True, "FAULT", "High vibration detected", anomaly_score
+    if anomaly_detected and temperature > 60.0:
+        return True, "FAULT", "High temperature detected", anomaly_score
+    if anomaly_detected:
+        return True, "WARNING", "Machine behavior is outside learned normal pattern", anomaly_score
+
+    return False, "NORMAL", "Machine operating normally", anomaly_score
 
 
 def simulate_machine_sample(t):
@@ -47,11 +66,12 @@ def simulate_machine_sample(t):
     return round(vibration_rms, 2), round(temperature, 2), fault_type
 
 
-def build_sensor_payload(vibration_rms, temperature, fault_detected, status, fault_type):
+def build_sensor_payload(vibration_rms, temperature, fault_detected, status, fault_type, anomaly_score):
     return {
         "machine_id": MACHINE_ID,
         "vibration_rms": vibration_rms,
         "temperature": temperature,
+        "anomaly_score": anomaly_score,
         "fault_detected": fault_detected,
         "fault_type": fault_type,
         "status": status,
@@ -70,16 +90,18 @@ def build_alert_payload(status, message, fault_type):
 
 
 def main():
+    model = load_edge_model()
     client = mqtt.Client()
     client.connect(BROKER, PORT, 60)
 
+    print(f"Loaded edge AI model from {MODEL_PATH}")
     print(f"Publishing sensor data to: {DATA_TOPIC}")
     print(f"Publishing alerts to: {ALERT_TOPIC}")
 
     t = 0
     while True:
         vibration_rms, temperature, fault_type = simulate_machine_sample(t)
-        fault_detected, status, message = detect_fault(vibration_rms, temperature)
+        fault_detected, status, message, anomaly_score = detect_fault(model, vibration_rms, temperature)
 
         sensor_payload = build_sensor_payload(
             vibration_rms,
@@ -87,6 +109,7 @@ def main():
             fault_detected,
             status,
             fault_type,
+            anomaly_score,
         )
 
         client.publish(DATA_TOPIC, json.dumps(sensor_payload))

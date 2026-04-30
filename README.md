@@ -9,7 +9,7 @@
 
 ## Project Description
 
-This project implements a simulation-based Edge AI and Industrial IoT system for vibration-based machine fault detection. A Python script simulates vibration and temperature readings from an industrial motor, applies simple edge AI fault detection logic locally, publishes sensor data and alerts through MQTT, and displays the results on a Node-RED dashboard.
+This project implements a simulation-based Edge AI and Industrial IoT system for vibration-based machine fault detection. A Python script simulates vibration and temperature readings from an industrial motor, trains a simple local ML anomaly detector, publishes sensor data and alerts through MQTT, and displays the results on a Node-RED dashboard.
 
 The system is designed for the CO326 Edge AI + Industrial IoT mini project.
 
@@ -32,6 +32,9 @@ Main components:
 project-root/
 +-- python/
 |   +-- requirements.txt
+|   +-- edge_ai_model.py
+|   +-- train_model.py
+|   +-- model.json
 |   +-- vibration_publisher.py
 +-- node-red/
 |   +-- flows.json
@@ -67,7 +70,22 @@ Open another terminal in the project root folder and run:
 python -m pip install -r python/requirements.txt
 ```
 
-### 3. Run the Vibration Publisher
+### 3. Train the Simple ML Model
+
+```bash
+python python/train_model.py
+```
+
+This creates:
+
+```text
+python/model.json
+```
+
+The model file stores the learned normal vibration and temperature values.
+The current training script uses 1000 simulated normal samples.
+
+### 4. Run the Vibration Publisher
 
 ```bash
 python python/vibration_publisher.py
@@ -75,7 +93,7 @@ python python/vibration_publisher.py
 
 The Python script publishes simulated machine data every 2 seconds.
 
-### 4. Open the Node-RED Dashboard
+### 5. Open the Node-RED Dashboard
 
 Open:
 
@@ -123,6 +141,7 @@ Example sensor payload:
   "machine_id": "motor_01",
   "vibration_rms": 2.34,
   "temperature": 36.5,
+  "anomaly_score": 1.42,
   "fault_detected": false,
   "fault_type": "normal",
   "status": "NORMAL",
@@ -144,14 +163,26 @@ Example alert payload:
 
 ## Edge AI Logic
 
-The edge AI logic runs locally in Python before data is published to the dashboard.
+The edge AI logic runs locally in Python before data is published to the dashboard. This is the edge computing part of the system because raw sensor values are processed on the local device before MQTT publishing.
 
-Detection rules:
+The project uses a simple ML anomaly detection model implemented in `python/edge_ai_model.py`.
 
-- `vibration_rms < 4.0`: Normal
-- `4.0 <= vibration_rms <= 6.0`: Warning
-- `vibration_rms > 6.0`: Fault
-- `temperature > 60.0`: High temperature warning
+Model approach:
+
+- `python/train_model.py` generates normal machine samples.
+- The model learns the normal mean and standard deviation for vibration and temperature.
+- The trained model parameters are saved in `python/model.json`.
+- `python/vibration_publisher.py` loads the trained model at runtime.
+- For each live sample, the model calculates an anomaly score using z-score distance.
+- If the anomaly score is greater than the model threshold, the edge script marks the sample as warning or fault.
+- The result is published to MQTT with the sensor payload.
+
+Final decision rules:
+
+- Normal anomaly score: `NORMAL`
+- High anomaly score with moderate change: `WARNING`
+- High anomaly score with `vibration_rms > 6.0`: `FAULT`
+- High anomaly score with `temperature > 60.0`: `FAULT`
 
 Simulated fault types:
 
@@ -191,9 +222,8 @@ Suggested screenshots:
 
 ## Future Improvements
 
-- Add a machine learning model for anomaly detection
+- Train the anomaly detection model using real vibration sensor data
 - Add more fault types such as imbalance and misalignment
 - Use a real vibration sensor with ESP32 or Raspberry Pi
 - Store MQTT data in a database for historical analysis
 - Improve the dashboard with status colors and fault history
-
